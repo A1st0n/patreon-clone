@@ -1,0 +1,40 @@
+:root { --ink: #111; --muted: #777; --line: #ececec; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.5 -apple-system, system-ui, sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 64px 24px; }
+h1 { font-size: 44px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 48px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
+
+/* Interactive 3D: CSS transforms, tilt driven by JS mouse handler in page.jsx */
+.card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  background: #fff;
+  transform-style: preserve-3d;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+.card:hover { box-shadow: 0 24px 60px -20px rgba(0,0,0,0.18); }
+.card h3 { margin: 0 0 6px; transform: translateZ(40px); }
+.card p { color: var(--muted); margin: 0 0 20px; transform: translateZ(20px); }
+.price { font-weight: 600; }
+button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font: inherit;
+  cursor: pointer;
+  transform: translateZ(30px);
+}
+button.ghost { background: #fff; color: var(--ink); }
+input { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font: inherit; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
