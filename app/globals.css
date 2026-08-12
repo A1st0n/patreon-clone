@@ -7,7 +7,7 @@
   --radius: 2px;       /* sharp corners for buttons/inputs/tabs */
   --card-radius: 14px; /* cards get a softer, symmetrical rounding */
   --card-bg: #f6f0e6;
-  --card-line: var(--card-line);
+  --card-line: #e7ddcd;
   --surface: #fff;
   --nav-bg: rgba(251,251,249,0.85);
   --foot-bg: rgba(251,251,249,0.6);
@@ -297,9 +297,8 @@ input:focus { outline: none; border-color: var(--muted); }
 .foot-link { color: var(--ink); text-decoration: none; font-size: 15px; }
 .foot-link:hover { color: var(--pink); }
 .foot-bottom { max-width: 960px; margin: 0 auto; padding: 18px 24px 40px; border-top: 1px solid var(--line); font-size: 13px; }
-.foot-social { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
-.foot-social .foot-link { font-size: 14px; color: var(--muted); }
-.foot-social .foot-link:hover { color: var(--pink); }
+
+
 
 /* Account settings: side nav + panels */
 .settings { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
@@ -384,3 +383,46 @@ input:focus { outline: none; border-color: var(--muted); }
 .attach-sep { height: 1px; background: var(--line); margin: 6px 4px; }
 .err { color: #d62e5c; font-size: 14px; margin: 12px 0 0; }
 video.preview, video.post-img { background: #000; }
+
+/* Respect users who ask for less motion: no petals, no color cycling. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .petals { display: none; }
+}
+
+/* Mobile: nav wraps instead of colliding, type and layout scale down */
+@media (max-width: 720px) {
+  .nav {
+    flex-direction: column; align-items: flex-start; gap: 10px;
+    padding: 12px 18px;
+    position: static; /* a stacked nav eats too much height to stick */
+  }
+  .tabs { gap: 16px; width: 100%; overflow-x: auto; padding-bottom: 2px; }
+  .tab { white-space: nowrap; font-size: 14px; }
+  .wrap { padding: 40px 18px 48px; }
+  h1 { font-size: 40px; }
+  .sub { font-size: 17px; }
+  .head { margin-bottom: 36px; }
+  .card, .compose, .post { padding: 22px; background-size: 150px; }
+  .grid { grid-template-columns: 1fr; gap: 20px; }
+  .settings { flex-direction: column; gap: 20px; }
+  .side { flex-direction: row; overflow-x: auto; width: 100%; min-width: 0; gap: 4px; }
+  .side-tab { border-left: none; border-bottom: 2px solid transparent; white-space: nowrap; padding: 6px 10px; }
+  .side-tab.on { border-left-color: transparent; border-bottom-color: var(--pink); }
+  .panel { min-width: 0; width: 100%; }
+  .actions { gap: 18px; }
+  .stats { gap: 22px; }
+  .foot-inner { flex-direction: column; gap: 28px; padding: 40px 18px 24px; }
+  .foot-cols { gap: 32px; }
+  .heart { top: 14px; left: 14px; }
+  input, .compose input, .field input { min-width: 0; width: 100%; }
+  .comment-form { flex-direction: column; align-items: stretch; }
+  .attach-menu { min-width: 200px; }
+}
+.foot-social { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
+.foot-social .foot-link { font-size: 14px; color: var(--muted); }
+.foot-social .foot-link:hover { color: var(--pink); }
