@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { admin } from '../../../lib/supabase';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Client is built inside the handler so a missing key cannot break the build.
 
 // This IS the async queue: Stripe delivers events out-of-band and retries with
 // backoff for ~3 days on non-2xx. The unique stripe_session_id makes the insert
@@ -9,6 +9,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // ponytail: webhook-as-queue. Move to a real queue (SQS/QStash) only if
 // post-payment work grows past what fits in one 2xx-under-timeout handler.
 export async function POST(req) {
+  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return new Response('Stripe is not configured', { status: 503 });
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
   const body = await req.text(); // raw body required for signature check
   let event;
   try {

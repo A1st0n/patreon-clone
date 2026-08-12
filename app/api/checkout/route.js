@@ -1,9 +1,13 @@
 import Stripe from 'stripe';
 import { admin } from '../../../lib/supabase';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
+// Built lazily: a missing key must not break the build, only this request.
 export async function POST(req) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return Response.json({ error: 'Stripe is not configured' }, { status: 503 });
+  }
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
   // "JWT tied to a specific user": verify the Supabase access token, get the user.
   const token = (req.headers.get('authorization') || '').replace('Bearer ', '');
   const { data: { user }, error } = await admin().auth.getUser(token);
