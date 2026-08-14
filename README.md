@@ -25,8 +25,22 @@ npm run dev
 Deploy: push to Vercel, add the same env vars, point a Stripe webhook at
 `https://<your-app>/api/webhook` for `checkout.session.completed`.
 
+## Two modes, one switch
+
+`lib/supabase.js` exports `isConfigured`. With a real `NEXT_PUBLIC_SUPABASE_URL`
+it is true and **the server enforces everything**: Supabase Auth owns sign-in,
+`profiles.role` owns the role, and the `post_content` RLS policy means a locked
+body is never sent to a non-patron. With the placeholder URL it is false and the
+app runs the localStorage demo, where roles are a view switch you can edit in
+devtools. The demo is for looking at; it is not a paywall.
+
+Roles: sign-up always yields `unpaid`. `paid` is set by the Stripe webhook.
+`creator` / `admin` are granted by hand: `update profiles set role='creator'
+where email='...';`
+
 ## Deliberately skipped (add when you actually need it)
 - Real job queue (Redis/BullMQ/QStash), webhook retries cover a demo.
-- Creator dashboard / posts / gated content, this is the membership spine only.
 - `customer.subscription.deleted` handling to flip status to `canceled`.
-- Password auth / OAuth, magic link needs zero UI.
+- Supabase Storage for images; they still travel as data URLs in a text column.
+- Likes/comments tables, they stay per-device in localStorage.
+- Server cron for scheduled posts; publishing still needs a tab open.

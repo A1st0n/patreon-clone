@@ -1,9 +1,11 @@
 import Link from 'next/link';
 
+// ponytail: Careers and Blog pointed at /about — a link that lies is worse than
+// no link. They come back when the pages do.
 const COLS = [
   ['Explore', [['Home', '/'], ['Explore', '/explore'], ['Feed', '/feed']]],
-  ['Company', [['About', '/about'], ['Careers', '/about'], ['Blog', '/feed']]],
-  ['Legal', [['Terms', '/about'], ['Privacy', '/about']]],
+  ['Company', [['About', '/about']]],
+  ['Legal', [['Terms', '/terms'], ['Privacy', '/privacy'], ['Accessibility', '/accessibility']]],
 ];
 
 export default function Footer() {

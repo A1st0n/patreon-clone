@@ -17,9 +17,11 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('patronage_theme')||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})()` }} />
       </head>
       <body>
+        {/* First tab stop on every page: jump past the nav to the content */}
+        <a className="skip" href="#main">Skip to content</a>
         <Petals />
         <Nav />
-        {children}
+        <main id="main">{children}</main>
         <Footer />
       </body>
     </html>

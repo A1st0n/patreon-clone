@@ -1,7 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { supabase, isConfigured } from '../lib/supabase';
+import { loadSession, setRole } from '../lib/session';
+import { TIERS, priceFor, yearlyCents } from '../lib/tiers';
 
 // Interactive 3D tilt, pure CSS transform, no 3D library.
 function tilt(e) {
@@ -23,10 +25,37 @@ const SEED = [
 export default function Home() {
   const [creators, setCreators] = useState(SEED);
   const [modal, setModal] = useState(null); // replaces window.alert
+  const [email, setEmail] = useState('');
+  const [yearly, setYearly] = useState(false);
+  const dlg = useRef(null);
   const router = useRouter();
 
+  useEffect(() => { if (modal) dlg.current?.showModal(); }, [modal]);
+
+  // Configured: Stripe Checkout, and only its webhook can flip the role.
+  // No keys: the demo shortcut, which is why the demo is not a paywall.
+  async function back(c, tier) {
+    const s = loadSession();
+    if (!s) { router.push('/signup'); return; }
+    if (!isConfigured) {
+      setRole('paid', tier.rank);
+      setModal(`You are now backing ${c.name} at the ${tier.name} tier${
+        yearly ? ', billed yearly' : ''}. Members-only posts are unlocked.`);
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${session?.access_token}` },
+      // tierId, not a price: the amount is looked up server-side from the tier row
+      body: JSON.stringify({ tierId: tier.id, interval: yearly ? 'year' : 'month' }),
+    });
+    const { url, error } = await res.json();
+    if (url) location.href = url; else setModal(error || 'Checkout is unavailable.');
+  }
+
   useEffect(() => {
-    supabase.from('creators').select('*')
+    supabase.from('creators').select('*, tiers(id, name, price_cents, rank, perks)')
       .then(({ data }) => { if (data?.length) setCreators(data); })
       .catch(() => {});
   }, []);
@@ -41,10 +70,20 @@ export default function Home() {
       </header>
 
       <div className="row" style={{ marginBottom: 72 }}>
-        <input placeholder="you@email.com" />
-        {/* ponytail: login flow ditched, just route to /account */}
-        <button className="btn-link tip" data-tip="Go to your account"
-                onClick={() => router.push('/account')}>Sign in</button>
+        <input placeholder="you@email.com" value={email}
+               onChange={(e) => setEmail(e.target.value)} />
+        {/* The email carries over so the hero form isn't a dead end */}
+        <button className="btn tip" data-tip="Free account"
+                onClick={() => router.push(`/signup?email=${encodeURIComponent(email)}`)}>Sign up</button>
+        <button className="btn-link tip" data-tip="Already a member"
+                onClick={() => router.push('/login')}>Sign in</button>
+      </div>
+
+      <div className="row" style={{ marginBottom: 28 }}>
+        <button className={'chip' + (!yearly ? ' on' : '')} aria-pressed={!yearly}
+                onClick={() => setYearly(false)}>Monthly</button>
+        <button className={'chip' + (yearly ? ' on' : '')} aria-pressed={yearly}
+                onClick={() => setYearly(true)}>Yearly · 2 months free</button>
       </div>
 
       <div className="grid">
@@ -52,23 +91,36 @@ export default function Home() {
           <div key={c.id} className="card" onMouseMove={tilt} onMouseLeave={untilt}>
             <h3>{c.name}</h3>
             <p>{c.bio}</p>
-            <div className="row">
-              <span className="price">${(c.price_cents / 100).toFixed(2)}<span className="per">/mo</span></span>
-              <button className="btn tip" data-tip={`Support ${c.name}`}
-                      onClick={() => router.push('/account')}>Become a patron</button>
-            </div>
+            {/* One card per creator, one row per tier. Prices derive from the
+                creator's base price so a repriced creator moves every tier. */}
+            {(c.tiers?.length ? c.tiers : TIERS.map((t) => ({
+              ...t, id: `${c.id}-${t.rank}`, price_cents: priceFor(c.price_cents, t.rank),
+            }))).map((t) => {
+              const cents = yearly ? yearlyCents(t.price_cents) : t.price_cents;
+              return (
+                <div key={t.id} className="tier-row">
+                  <div>
+                    <div className="post-name">{t.name}</div>
+                    <div className="muted" style={{ fontSize: 14 }}>{t.perks}</div>
+                  </div>
+                  <span className="price">
+                    ${(cents / 100).toFixed(2)}<span className="per">/{yearly ? 'yr' : 'mo'}</span>
+                  </span>
+                  <button className="btn tip" data-tip={`Support ${c.name}`}
+                          onClick={() => back(c, t)}>Join</button>
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
 
-      {modal && (
-        <div className="overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <p>{modal}</p>
-            <button className="btn" onClick={() => setModal(null)}>Got it</button>
-          </div>
-        </div>
-      )}
+      {/* ponytail: native <dialog>. showModal() gives Escape, the focus trap,
+          focus restore and role="dialog" free — none of it hand-rolled. */}
+      <dialog className="dialog" ref={dlg} onClose={() => setModal(null)}>
+        <p>{modal}</p>
+        <button className="btn" onClick={() => dlg.current.close()}>Got it</button>
+      </dialog>
     </div>
   );
 }

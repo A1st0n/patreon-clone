@@ -12,10 +12,7 @@ const SECTIONS = [
   ['language', 'Language'], ['activity', 'Activity'], ['faq', 'FAQ'], ['help', 'Help'],
 ];
 
-const LANGS = [
-  ['en', 'English'], ['ja', '日本語'], ['es', 'Español'],
-  ['fr', 'Français'], ['de', 'Deutsch'], ['ko', '한국어'],
-];
+import { LANGS, loadLang, applyLang } from '../../lib/i18n';
 
 export default function Account() {
   const [tab, setTab] = useState('profile');
@@ -29,7 +26,7 @@ export default function Account() {
   useEffect(() => {
     setProfile(loadProfile());
     setTheme(loadTheme());
-    setLang(localStorage.getItem('patronage_lang') || 'en');
+    setLang(loadLang());
     try { setPosts(JSON.parse(localStorage.getItem('patronage_posts')) || []); } catch { setPosts([]); }
   }, []);
 
@@ -46,7 +43,8 @@ export default function Account() {
     saveProfile(next); setProfile(next); setEditing(false);
   }
   function pickTheme(t) { setTheme(t); applyTheme(t); }
-  function pickLang(l) { setLang(l); localStorage.setItem('patronage_lang', l); }
+  // Reload so every already-rendered label re-runs t() with the new language.
+  function pickLang(l) { setLang(l); applyLang(l); location.reload(); }
 
   const likes = posts.filter((p) => p.liked).length;
   const saved = posts.filter((p) => p.bookmarked).length;

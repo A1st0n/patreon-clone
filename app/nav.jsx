@@ -1,6 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { loadSession, signOut, sync, canPost, isAdmin } from '../lib/session';
+import { loadLang, applyLang, t } from '../lib/i18n';
 
 const TABS = [
   ['/', 'Home'],
@@ -12,6 +15,19 @@ const TABS = [
 
 export default function Nav() {
   const path = usePathname();
+  const [session, setSession] = useState(null);
+  const [lang, setLang] = useState('en');
+  // Re-read on navigation: sign in/out is a localStorage write, not a prop.
+  useEffect(() => {
+    setSession(loadSession());          // instant, from the mirror
+    sync().then(setSession).catch(() => {}); // then the server's word for it
+    const l = loadLang();
+    setLang(l); applyLang(l);           // keeps <html lang> honest for screen readers
+  }, [path]);
+  const role = session?.role;
+  const tabs = canPost(role)
+    ? [...TABS, ['/admin', isAdmin(role) ? 'Admin' : 'Studio']]
+    : TABS;
   return (
     <nav className="nav">
       <Link href="/" className="brand">
@@ -34,12 +50,21 @@ export default function Nav() {
         Patronage
       </Link>
       <div className="tabs">
-        {TABS.map(([href, label]) => (
+        {tabs.map(([href, label]) => (
           <Link key={href} href={href}
                 className={'tab' + (path === href ? ' active' : '')}>
-            {label}
+            {t(label, lang)}
           </Link>
         ))}
+        {session
+          ? <button className="tab" title={session.email}
+                    onClick={() => { signOut(); setSession(null); location.href = '/'; }}>
+              {t('Sign out', lang)} ({role})
+            </button>
+          : <>
+              <Link href="/login" className={'tab' + (path === '/login' ? ' active' : '')}>{t('Sign in', lang)}</Link>
+              <Link href="/signup" className={'tab' + (path === '/signup' ? ' active' : '')}>{t('Sign up', lang)}</Link>
+            </>}
       </div>
     </nav>
   );

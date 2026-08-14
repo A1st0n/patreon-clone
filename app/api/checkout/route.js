@@ -13,10 +13,21 @@ export async function POST(req) {
   const { data: { user }, error } = await admin().auth.getUser(token);
   if (error || !user) return Response.json({ error: 'unauthorized' }, { status: 401 });
 
-  const { creatorId } = await req.json();
-  const { data: creator } = await admin()
-    .from('creators').select('*').eq('id', creatorId).single();
-  if (!creator) return Response.json({ error: 'no creator' }, { status: 404 });
+  // Trust boundary: the body is attacker-controlled. PostgREST binds the value
+  // so a string can't inject a filter, but a non-string reaches the DB as junk.
+  const { tierId, interval = 'month' } = await req.json().catch(() => ({}));
+  if (typeof tierId !== 'string') return Response.json({ error: 'bad request' }, { status: 400 });
+  if (interval !== 'month' && interval !== 'year') {
+    return Response.json({ error: 'bad interval' }, { status: 400 });
+  }
+
+  // Price comes from the tier row, never from the request body.
+  const { data: tier } = await admin()
+    .from('tiers').select('*, creators(id, name)').eq('id', tierId).single();
+  if (!tier) return Response.json({ error: 'no tier' }, { status: 404 });
+
+  // Annual bills 10 months for 12; keep the maths here, not in the browser.
+  const amount = interval === 'year' ? tier.price_cents * 10 : tier.price_cents;
 
   const site = process.env.NEXT_PUBLIC_SITE_URL;
   const session = await stripe.checkout.sessions.create({
@@ -26,14 +37,16 @@ export async function POST(req) {
       quantity: 1,
       price_data: {
         currency: 'usd',
-        recurring: { interval: 'month' },
-        unit_amount: creator.price_cents,
-        product_data: { name: `Patron: ${creator.name}` },
+        recurring: { interval },
+        unit_amount: amount,
+        product_data: { name: `${tier.creators.name} — ${tier.name}` },
       },
     }],
     // metadata is how the webhook knows who paid for what
-    metadata: { patron_id: user.id, creator_id: creator.id },
-    success_url: `${site}/?joined=${creator.id}`,
+    metadata: {
+      patron_id: user.id, creator_id: tier.creators.id, tier_id: tier.id, interval,
+    },
+    success_url: `${site}/?joined=${tier.creators.id}`,
     cancel_url: `${site}/`,
   });
 
